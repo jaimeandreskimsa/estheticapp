@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { Eye, EyeOff, Mail, Lock, AlertCircle } from 'lucide-react'
+import { authApi } from '../services/api'
 
 export default function Login() {
   const navigate = useNavigate()
@@ -15,28 +16,16 @@ export default function Login() {
     setError('')
     setLoading(true)
 
-    // Simulación de login (en producción conectar con API)
     try {
-      // TODO: Conectar con /api/auth/login
-      await new Promise(resolve => setTimeout(resolve, 1000))
+      const response = await authApi.login(email, password)
+      const { token, user } = response.data
 
-      // Mock: Validación simple
-      if (email && password) {
-        // Guardar token simulado
-        localStorage.setItem('token', 'mock_jwt_token')
-        localStorage.setItem('user', JSON.stringify({
-          id: '1',
-          name: 'Dr. Juan Pérez',
-          email: email,
-          role: 'doctor',
-          avatar: null
-        }))
-        navigate('/dashboard')
-      } else {
-        setError('Por favor complete todos los campos')
-      }
-    } catch (err) {
-      setError('Error al iniciar sesión. Intente nuevamente.')
+      localStorage.setItem('token', token)
+      localStorage.setItem('user', JSON.stringify(user))
+      navigate('/dashboard')
+    } catch (err: unknown) {
+      const msg = (err as { response?: { data?: { error?: string } } })?.response?.data?.error
+      setError(msg || 'Error al iniciar sesión. Verifica tus credenciales.')
     } finally {
       setLoading(false)
     }

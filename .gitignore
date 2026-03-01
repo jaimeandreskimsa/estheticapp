@@ -47,8 +47,9 @@ Thumbs.db
 # Docker
 # .dockerignore  ← los necesitamos en git para Railway
 
-# Uploads
-backend/uploads/
+# Uploads — ignorar archivos pero conservar el directorio
+backend/uploads/*
+!backend/uploads/.gitkeep
 frontend/public/uploads/
 
 # Database dumps

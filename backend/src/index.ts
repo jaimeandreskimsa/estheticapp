@@ -11,6 +11,7 @@ import { diagnosticoRouter } from './routes/diagnostico';
 import { planRouter } from './routes/plan';
 import { presupuestoRouter } from './routes/presupuesto';
 import { sesionesRouter } from './routes/sesiones';
+import { initDatabase } from './database/init';
 
 // Cargar variables de entorno
 config();
@@ -66,9 +67,19 @@ app.use((req, res) => {
 app.use(errorHandler);
 
 // Iniciar servidor
-app.listen(PORT, () => {
-  logger.info(`🚀 Backend running on port ${PORT}`);
-  logger.info(`📚 API docs available at http://localhost:${PORT}/api-docs`);
-});
+async function startServer() {
+  try {
+    await initDatabase();
+    app.listen(PORT, () => {
+      logger.info(`🚀 Backend running on port ${PORT}`);
+      logger.info(`📚 API docs: http://localhost:${PORT}/api-docs`);
+    });
+  } catch (err) {
+    logger.error('Fatal: could not start server', err);
+    process.exit(1);
+  }
+}
+
+startServer();
 
 export default app;
