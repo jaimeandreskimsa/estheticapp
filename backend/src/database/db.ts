@@ -21,7 +21,7 @@ export function getPool(): Pool {
       connectionTimeoutMillis: 10000,
     });
 
-    pool.on('error', (err) => {
+    pool.on('error', (err: Error) => {
       logger.error('Unexpected error on idle PostgreSQL client', err);
     });
 

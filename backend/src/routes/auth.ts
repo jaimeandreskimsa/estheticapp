@@ -35,7 +35,7 @@ router.post('/login', async (req, res) => {
   const token = jwt.sign(
     { userId: user.id, email: user.email, role: user.role, clinicId: user.clinic_id },
     getSecret(),
-    { expiresIn: process.env.JWT_EXPIRATION || '7d' }
+    { expiresIn: (process.env.JWT_EXPIRATION || '7d') as unknown as jwt.SignOptions['expiresIn'] }
   );
 
   logger.info(`User logged in: ${user.email}`);
