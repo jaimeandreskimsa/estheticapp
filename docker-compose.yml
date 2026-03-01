@@ -1,0 +1,118 @@
+version: '3.9'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: esthetic_postgres
+    environment:
+      POSTGRES_USER: esthetic_user
+      POSTGRES_PASSWORD: esthetic_pass_dev
+      POSTGRES_DB: esthetic_db
+      PGDATA: /var/lib/postgresql/data/pgdata
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U esthetic_user -d esthetic_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - esthetic_network
+
+  # Redis Cache
+  redis:
+    image: redis:7-alpine
+    container_name: esthetic_redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - esthetic_network
+
+  # pgAdmin (Database UI)
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: esthetic_pgadmin
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@esthetic.com
+      PGADMIN_DEFAULT_PASSWORD: admin_dev
+    ports:
+      - "5050:80"
+    depends_on:
+      - postgres
+    networks:
+      - esthetic_network
+
+  # Redis Commander
+  redis-commander:
+    image: rediscommander/redis-commander:latest
+    container_name: esthetic_redis_commander
+    environment:
+      - REDIS_HOSTS=local:redis:6379
+    ports:
+      - "8081:8081"
+    depends_on:
+      - redis
+    networks:
+      - esthetic_network
+
+  # Backend API
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: esthetic_backend
+    ports:
+      - "8000:8000"
+    environment:
+      NODE_ENV: development
+      DATABASE_URL: postgresql://esthetic_user:esthetic_pass_dev@postgres:5432/esthetic_db
+      REDIS_URL: redis://redis:6379
+      JWT_SECRET: dev_secret_key_change_in_prod
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+      LOG_LEVEL: debug
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./backend/src:/app/src
+      - ./backend/uploads:/app/uploads
+    networks:
+      - esthetic_network
+
+  # Frontend
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: esthetic_frontend
+    ports:
+      - "3000:3000"
+    environment:
+      REACT_APP_API_URL: http://localhost:3001
+      REACT_APP_ENV: development
+    depends_on:
+      - backend
+    volumes:
+      - ./frontend/src:/app/src
+    networks:
+      - esthetic_network
+
+volumes:
+  postgres_data:
+  redis_data:
+
+networks:
+  esthetic_network:
+    driver: bridge

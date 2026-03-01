@@ -1,0 +1,218 @@
+PROJECT STRUCTURE
+=================
+
+estheticapp/
+├── README.md                          # Descripción general del proyecto
+├── QUICKSTART.md                      # Guía rápida para empezar ✨
+├── CONTRIBUTING.md                    # Guías de contribución
+├── .env.example                       # Variables de entorno template
+├── .gitignore                         # Git ignore file
+├── docker-compose.yml                 # Orquestación Docker (PostgreSQL, Redis, etc)
+│
+├── docs/                              # Documentación técnica
+│   ├── ARCHITECTURE.md               # Arquitectura del sistema
+│   ├── DEVELOPMENT.md                # Guía de desarrollo
+│   ├── LEGAL.md                      # Compliance legal (Chile)
+│   └── API.md                        # (próximo: API Reference)
+│
+├── database/                          # Base de datos
+│   ├── schema.sql                    # Esquema completo (20+ tablas)
+│   ├── README.md                     # Documentación de BD
+│   ├── migrations/                   # (próximo: TypeORM migrations)
+│   └── seeds/
+│       └── initial_data.sql          # Datos de ejemplo
+│
+├── backend/                           # API REST (Node.js/Express)
+│   ├── package.json                  # Dependencias backend
+│   ├── tsconfig.json                 # Configuración TypeScript
+│   ├── Dockerfile                    # Docker build backend
+│   │
+│   └── src/
+│       ├── index.ts                  # Entry point (Express app)
+│       │
+│       ├── routes/                   # API endpoints
+│       │   ├── auth.ts              # Login, register, verify
+│       │   ├── patients.ts          # CRUD pacientes
+│       │   ├── consultas.ts         # Nueva consulta
+│       │   ├── diagnostico.ts       # Diagnóstico (IA)
+│       │   ├── plan.ts              # Plan de tratamiento
+│       │   ├── presupuesto.ts       # Presupuesto
+│       │   └── sesiones.ts          # Sesiones de ejecución
+│       │
+│       ├── services/                 # Lógica de negocio
+│       │   ├── auth.service.ts      # (próximo)
+│       │   ├── patient.service.ts   # (próximo)
+│       │   ├── diagnosis.service.ts # (próximo)
+│       │   └── ...
+│       │
+│       ├── models/                   # Entidades TypeORM
+│       │   ├── User.ts              # (próximo)
+│       │   ├── Patient.ts           # (próximo)
+│       │   ├── ClinicalRecord.ts    # (próximo)
+│       │   └── ...
+│       │
+│       ├── middlewares/              # Middlewares Express
+│       │   ├── errorHandler.ts      # Manejo de errores ✓
+│       │   ├── auth.ts              # (próximo: JWT validation)
+│       │   └── validators.ts        # (próximo: input validation)
+│       │
+│       ├── ai/                       # Servicios de IA
+│       │   ├── openai.ts            # (próximo: GPT-4 integration)
+│       │   ├── whisper.ts           # (próximo: Speech-to-text)
+│       │   └── vision.ts            # (próximo: Image analysis)
+│       │
+│       └── utils/
+│           ├── logger.ts            # Logging con Pino ✓
+│           └── validators.ts        # (próximo)
+│
+├── frontend/                          # React SPA
+│   ├── package.json                  # Dependencias frontend
+│   ├── tsconfig.json                 # Configuración TypeScript
+│   ├── tsconfig.node.json            # TypeScript para build
+│   ├── vite.config.ts                # Configuración Vite
+│   ├── tailwind.config.js            # Configuración Tailwind CSS
+│   ├── postcss.config.js             # PostCSS config
+│   ├── Dockerfile                    # Docker build frontend
+│   ├── index.html                    # HTML principal ✓
+│   │
+│   └── src/
+│       ├── main.tsx                  # Entry point React ✓
+│       ├── App.tsx                   # Router principal ✓
+│       │
+│       ├── pages/                    # Páginas principales
+│       │   ├── Dashboard.tsx         # Dashboard ✓
+│       │   ├── Patients.tsx          # Lista de pacientes ✓
+│       │   ├── PatientDetail.tsx     # Detalle paciente
+│       │   ├── NewConsulta.tsx       # Nueva consulta
+│       │   ├── Diagnosis.tsx         # Diagnóstico
+│       │   ├── TreatmentPlan.tsx     # Plan de tratamiento
+│       │   ├── Budget.tsx            # Presupuesto
+│       │   └── Sessions.tsx          # Sesiones
+│       │
+│       ├── components/               # Componentes reutilizables
+│       │   ├── Header.tsx            # Header con notificaciones ✓
+│       │   ├── Sidebar.tsx           # Navegación lateral ✓
+│       │   ├── Button.tsx            # (próximo)
+│       │   ├── Modal.tsx             # (próximo)
+│       │   ├── Form.tsx              # (próximo)
+│       │   └── ...
+│       │
+│       ├── layouts/                  # Layouts
+│       │   └── MainLayout.tsx        # Layout principal ✓
+│       │
+│       ├── services/                 # Clientes API
+│       │   ├── api.ts               # Axios instance ✓
+│       │   ├── patient.api.ts       # (próximo)
+│       │   ├── diagnosis.api.ts     # (próximo)
+│       │   └── ...
+│       │
+│       ├── hooks/                    # Custom React hooks
+│       │   ├── useAuth.ts           # (próximo)
+│       │   ├── useFetch.ts          # (próximo)
+│       │   └── ...
+│       │
+│       └── styles/
+│           └── globals.css           # Estilos globales ✓
+
+───────────────────────────────────────────────────────────
+
+KEY FEATURES IMPLEMENTED
+========================
+
+✓ Completa arquitectura full-stack
+✓ Docker Compose (PostgreSQL, Redis, pgAdmin, Redis Commander)
+✓ Base de datos relacional con 20+ tablas
+✓ API REST base con rutas principales
+✓ Frontend React con navegación y componentes base
+✓ TypeScript en ambos lados
+✓ Tailwind CSS para estilos
+✓ Logger estructurado (Pino)
+✓ Error handling centralizado
+✓ Documentación técnica completa
+✓ Compliance legal Chile (MINSAL, DS41, Ley 20.584)
+✓ Esquema BD listo para 4 módulos (Diagnóstico, Plan, Presupuesto, Historial)
+
+───────────────────────────────────────────────────────────
+
+IMMEDIATE NEXT STEPS
+====================
+
+1. Implementar autenticación (JWT + 2FA)
+   backend/src/services/auth.service.ts
+   backend/src/middlewares/auth.ts
+
+2. Conectar OpenAI API
+   backend/src/ai/openai.ts
+   backend/src/services/diagnosis.service.ts
+
+3. Crear modelos TypeORM
+   backend/src/models/ (User, Patient, ClinicalRecord, etc)
+
+4. Implementar servicios de negocio
+   backend/src/services/
+
+5. Conectar frontend a API
+   frontend/src/services/
+   frontend/src/hooks/
+
+6. Crear forms para captura de datos
+   frontend/src/pages/NewConsulta.tsx
+   frontend/src/components/ConsultaForm.tsx
+
+7. Testing (Backend + Frontend)
+   backend/src/__tests__/
+   frontend/src/__tests__/
+
+───────────────────────────────────────────────────────────
+
+DEVELOPMENT COMMANDS
+====================
+
+# Install & Start
+npm run dev          # Backend & Frontend
+docker-compose up   # All services
+
+# Development
+npm run lint        # Linting
+npm run format      # Code formatting
+npm run typecheck   # Type checking
+npm run test        # Testing
+
+# Production
+npm run build       # Build
+npm start          # Start
+
+───────────────────────────────────────────────────────────
+
+STACK SUMMARY
+=============
+
+Backend:
+  Runtime: Node.js 18+ / TypeScript
+  Framework: Express.js
+  DB: PostgreSQL + Redis
+  ORM: TypeORM (próximo)
+  IA: OpenAI GPT-4 / Whisper
+  Auth: JWT + 2FA
+  Logging: Pino
+  Testing: Jest
+
+Frontend:
+  Framework: React 18 + TypeScript
+  Build Tool: Vite
+  Styling: Tailwind CSS
+  State: React Query + Zustand (próximo)
+  Forms: React Hook Form (próximo)
+  Testing: Vitest/Jest
+
+Infrastructure:
+  Containers: Docker
+  Orchestration: Docker Compose
+  DB: PostgreSQL 15
+  Cache: Redis 7
+  Admin: pgAdmin + Redis Commander
+
+───────────────────────────────────────────────────────────
+
+Created: 2 de febrero de 2026
+Status: ✨ READY FOR DEVELOPMENT

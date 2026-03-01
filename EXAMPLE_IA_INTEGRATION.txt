@@ -1,0 +1,402 @@
+// EJEMPLO: Integración OpenAI para Diagnóstico Automático
+// Archivo: backend/src/ai/openai.ts (crear este archivo)
+
+import { OpenAI } from 'openai'
+import { logger } from '../utils/logger'
+
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY
+})
+
+/**
+ * Genera diagnóstico clínico usando GPT-4
+ * Input: Datos capturados en la consulta
+ * Output: Diagnóstico profesional + resumen paciente + visual
+ */
+export async function generateDiagnosis(input: {
+  patientAge: number
+  patientSex: 'M' | 'F' | 'Other'
+  skinType: string
+  fitzpatrickType: number
+  chiefComplaint: string
+  anamnesisData: Record<string, any>
+  physicalExamFindings: Record<string, any>
+  photoUrls?: string[]
+}) {
+  try {
+    logger.info('Generating diagnosis with IA...')
+
+    // 1️⃣ Preparar prompt con contexto médico
+    const diagnosticPrompt = `
+    Eres un médico especialista en medicina estética con 15 años de experiencia.
+    
+    DATOS DEL PACIENTE:
+    - Edad: ${input.patientAge} años
+    - Sexo biológico: ${input.patientSex}
+    - Tipo de piel: ${input.skinType}
+    - Fototipo Fitzpatrick: ${input.fitzpatrickType}
+    
+    MOTIVO DE CONSULTA:
+    ${input.chiefComplaint}
+    
+    ANAMNESIS RELEVANTE:
+    ${JSON.stringify(input.anamnesisData, null, 2)}
+    
+    HALLAZGOS FÍSICOS:
+    ${JSON.stringify(input.physicalExamFindings, null, 2)}
+    
+    INSTRUCCIONES:
+    1. Genera un DIAGNÓSTICO CLÍNICO profesional (máx 150 palabras)
+       - Usa terminología médica correcta
+       - Sé específico en zonas anatómicas
+       - Menciona severidad (leve/moderada/severa)
+    
+    2. Crea un RESUMEN SIMPLE para el paciente (máx 100 palabras)
+       - Sin jerga médica
+       - Explicación en términos comprensibles
+       - Enfocado en lo que se verá mejorado
+    
+    3. Sugiere HALLAZGOS VISUALES (zonas a marcar en imagen)
+       - Ej: "Tercio superior, zona glabelar"
+       - Ej: "Región periorbital bilateral"
+    
+    Responde en formato JSON exacto:
+    {
+      "diagnostico_clinico": "...",
+      "resumen_paciente": "...",
+      "zonas_visuales": ["zona1", "zona2", ...]
+    }
+    `
+
+    // 2️⃣ Llamada a GPT-4
+    const response = await openai.chat.completions.create({
+      model: 'gpt-4-turbo-preview',
+      messages: [
+        {
+          role: 'system',
+          content: 'Eres un médico especialista en medicina estética. Responde siempre en JSON válido.'
+        },
+        {
+          role: 'user',
+          content: diagnosticPrompt
+        }
+      ],
+      temperature: 0.7, // Balance entre creatividad y consistencia
+      max_tokens: 1000
+    })
+
+    // 3️⃣ Parsear respuesta
+    const content = response.choices[0].message.content || ''
+    const diagnosis = JSON.parse(content)
+
+    logger.info('Diagnosis generated successfully')
+
+    return {
+      clinicalDiagnosis: diagnosis.diagnostico_clinico,
+      patientSummary: diagnosis.resumen_paciente,
+      visualZones: diagnosis.zonas_visuales,
+      aiGenerated: true,
+      model: 'gpt-4-turbo-preview',
+      tokensUsed: response.usage?.total_tokens || 0
+    }
+  } catch (error) {
+    logger.error('Error generating diagnosis:', error)
+    throw error
+  }
+}
+
+/**
+ * Transcribe audio consultation to text
+ * Input: URL de audio desde frontend (grabación de voz)
+ * Output: Texto transcrito
+ */
+export async function transcribeConsultation(audioUrl: string) {
+  try {
+    logger.info('Transcribing consultation...')
+
+    // Nota: En producción, descargar el audio primero
+    // const audioBuffer = await downloadFile(audioUrl)
+
+    const transcription = await openai.audio.transcriptions.create({
+      file: audioUrl, // En producción: Buffer del audio
+      model: 'whisper-1',
+      language: 'es'
+    })
+
+    logger.info('Transcription completed')
+
+    return {
+      text: transcription.text,
+      duration: transcription.duration || undefined
+    }
+  } catch (error) {
+    logger.error('Error transcribing audio:', error)
+    throw error
+  }
+}
+
+/**
+ * Analiza fotos clínicas para extraer hallazgos
+ * Input: URL de foto clínica
+ * Output: Análisis automático de hallazgos
+ */
+export async function analyzeClinicPhoto(photoUrl: string) {
+  try {
+    logger.info('Analyzing clinical photo...')
+
+    const analysis = await openai.chat.completions.create({
+      model: 'gpt-4-vision-preview',
+      messages: [
+        {
+          role: 'user',
+          content: [
+            {
+              type: 'text',
+              text: `Analiza esta foto clínica de medicina estética e identifica:
+              1. Zonas con líneas de expresión
+              2. Áreas con pérdida de volumen
+              3. Grado de flacidez
+              4. Asimetrías evidentes
+              
+              Responde en JSON: { lineas_expresion: [], perdida_volumen: [], flacidez: "", acentrias: [] }`
+            },
+            {
+              type: 'image_url',
+              image_url: { url: photoUrl }
+            }
+          ]
+        }
+      ],
+      max_tokens: 500
+    })
+
+    const content = analysis.choices[0].message.content || ''
+    const findings = JSON.parse(content)
+
+    logger.info('Photo analysis completed')
+
+    return findings
+  } catch (error) {
+    logger.error('Error analyzing photo:', error)
+    throw error
+  }
+}
+
+/**
+ * Sugiere procedimientos basados en diagnóstico
+ * Input: Diagnóstico clínico + tipo de piel
+ * Output: Procedimientos recomendados con justificación
+ */
+export async function suggestProcedures(
+  clinicalDiagnosis: string,
+  skinType: string,
+  fitzpatrickType: number
+) {
+  try {
+    logger.info('Suggesting procedures...')
+
+    const prompt = `
+    Basado en este diagnóstico clínico de medicina estética:
+    "${clinicalDiagnosis}"
+    
+    Tipo de piel: ${skinType}
+    Fototipo Fitzpatrick: ${fitzpatrickType}
+    
+    Sugiere 3-4 procedimientos específicos ordenados por prioridad.
+    Para cada uno incluye:
+    1. Nombre del procedimiento
+    2. Producto recomendado
+    3. Cantidad estimada (ml o unidades)
+    4. Zona de aplicación
+    5. Número de sesiones
+    6. Justificación clínica
+    
+    Responde en JSON: { procedimientos: [{ nombre: "", producto: "", cantidad: 0, zona: "", sesiones: 0, justificacion: "" }] }`
+
+    const response = await openai.chat.completions.create({
+      model: 'gpt-4-turbo-preview',
+      messages: [
+        {
+          role: 'system',
+          content: 'Eres un médico especialista en medicina estética. Responde con procedimientos seguros y probados.'
+        },
+        {
+          role: 'user',
+          content: prompt
+        }
+      ],
+      temperature: 0.5, // Menos creativo para consistencia médica
+      max_tokens: 1500
+    })
+
+    const content = response.choices[0].message.content || ''
+    const suggestions = JSON.parse(content)
+
+    logger.info('Procedures suggested successfully')
+
+    return suggestions.procedimientos
+  } catch (error) {
+    logger.error('Error suggesting procedures:', error)
+    throw error
+  }
+}
+
+/**
+ * Valida si un paciente es candidato para tratamiento
+ * Input: Expectativas paciente + contraindicaciones
+ * Output: Candidato apto / parcial / no apto
+ */
+export async function validatePatientSuitability(input: {
+  expectations: string
+  medicalHistory: Record<string, any>
+  medications: string[]
+  allergies: string[]
+}) {
+  try {
+    logger.info('Validating patient suitability...')
+
+    const prompt = `
+    Evalúa si este paciente es candidato para tratamiento estético:
+    
+    EXPECTATIVAS:
+    "${input.expectations}"
+    
+    ANTECEDENTES MÉDICOS:
+    ${JSON.stringify(input.medicalHistory, null, 2)}
+    
+    MEDICAMENTOS:
+    ${input.medications.join(', ')}
+    
+    ALERGIAS:
+    ${input.allergies.join(', ')}
+    
+    Determina el estado de candidatura y proporciona justificación médica.
+    
+    Responde en JSON: {
+      "candidatura": "ÓPTIMO | PARCIAL | NO_APTO",
+      "justificacion": "...",
+      "contraindicaciones": ["..."],
+      "recomendaciones": ["..."]
+    }`
+
+    const response = await openai.chat.completions.create({
+      model: 'gpt-4-turbo-preview',
+      messages: [
+        {
+          role: 'user',
+          content: prompt
+        }
+      ],
+      temperature: 0.3, // Muy conservador para decisiones clínicas
+      max_tokens: 800
+    })
+
+    const content = response.choices[0].message.content || ''
+    const suitability = JSON.parse(content)
+
+    logger.info('Suitability assessment completed')
+
+    return suitability
+  } catch (error) {
+    logger.error('Error validating suitability:', error)
+    throw error
+  }
+}
+
+// ───────────────────────────────────────────────────────────────────────
+
+// EJEMPLO DE USO EN UN SERVICIO
+// Archivo: backend/src/services/diagnosis.service.ts (crear este archivo)
+
+export async function createDiagnosisWithAI(clinicalRecordId: string) {
+  // 1. Obtener datos de la consulta desde BD
+  const clinicalRecord = await getClinicarlRecordFromDB(clinicalRecordId)
+  const anamnesis = await getAnamnesisFromDB(clinicalRecordId)
+  const physicalExam = await getPhysicalExamFromDB(clinicalRecordId)
+
+  // 2. Llamar IA para generar diagnóstico
+  const diagnosis = await generateDiagnosis({
+    patientAge: clinicalRecord.patient.age,
+    patientSex: clinicalRecord.patient.biologicalSex,
+    skinType: physicalExam.skinType,
+    fitzpatrickType: physicalExam.fitzpatrickType,
+    chiefComplaint: clinicalRecord.chiefComplaint,
+    anamnesisData: anamnesis,
+    physicalExamFindings: physicalExam
+  })
+
+  // 3. Guardar en BD
+  await saveDiagnosisToDatabase({
+    clinicalRecordId,
+    clinicalDiagnosis: diagnosis.clinicalDiagnosis,
+    patientSummary: diagnosis.patientSummary,
+    visualSummaryUrl: null, // Próximo: generar imagen con zonas marcadas
+    aiGenerated: true
+  })
+
+  // 4. Retornar al frontend
+  return diagnosis
+}
+
+// ───────────────────────────────────────────────────────────────────────
+
+// ENDPOINT EXPRESS
+// Archivo: backend/src/routes/diagnostico.ts (ya existe, agregar)
+
+import { Router } from 'express'
+import { generateDiagnosis } from '../ai/openai'
+
+const router = Router()
+
+// POST /api/diagnostico/generate
+router.post('/generate', async (req, res) => {
+  try {
+    const { clinicalRecordId } = req.body
+
+    const diagnosis = await createDiagnosisWithAI(clinicalRecordId)
+
+    res.json({
+      success: true,
+      data: diagnosis
+    })
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: 'Failed to generate diagnosis'
+    })
+  }
+})
+
+export { router as diagnosticoRouter }
+
+// ───────────────────────────────────────────────────────────────────────
+
+// LLAMADA DESDE FRONTEND (React)
+// Archivo: frontend/src/services/diagnosis.api.ts (crear)
+
+import api from './api'
+
+export async function generateDiagnosisAPI(clinicalRecordId: string) {
+  const response = await api.post('/api/diagnostico/generate', {
+    clinicalRecordId
+  })
+  return response.data
+}
+
+// Uso en componente:
+// const handleGenerateDiagnosis = async () => {
+//   const result = await generateDiagnosisAPI(consultaId)
+//   setDiagnosis(result.data)
+// }
+
+// ───────────────────────────────────────────────────────────────────────
+
+SIGUIENTES PASOS:
+1. Crear estos archivos en el proyecto
+2. Instalar: npm install openai
+3. Agregar OPENAI_API_KEY a .env
+4. Completar la integración con BD (TypeORM models)
+5. Hacer requests desde frontend
+6. Testear con datos reales
+
+Para más detalles, ver docs/DEVELOPMENT.md
