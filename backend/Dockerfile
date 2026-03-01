@@ -1,32 +1,34 @@
-FROM node:18-alpine
+# ── Stage 1: Build ──────────────────────────────────────────────────────────
+FROM node:18-slim AS builder
 
 WORKDIR /app
 
-# Instalar dependencias del sistema
-RUN apk add --no-cache python3 make g++ cairo-dev jpeg-dev pango-dev giflib-dev pixman-dev
+# Dependencias del sistema para compilar módulos nativos (sharp, etc.)
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    python3 make g++ \
+    && rm -rf /var/lib/apt/lists/*
 
-# Copiar package files
 COPY package*.json ./
-
-# Instalar todas las dependencias (incluidas devDependencies para compilar)
 RUN npm install
 
-# Copiar código fuente
 COPY src ./src
 COPY tsconfig.json ./
-
-# Compilar TypeScript
 RUN npm run build
 
-# Eliminar devDependencies después de compilar
-RUN npm prune --production
+# ── Stage 2: Production ──────────────────────────────────────────────────────
+FROM node:18-slim
 
-# Exponer puerto (Railway inyecta PORT automáticamente)
+WORKDIR /app
+
+COPY package*.json ./
+RUN npm install --omit=dev
+
+COPY --from=builder /app/dist ./dist
+
+# Railway inyecta PORT automáticamente
 EXPOSE 8000
 
-# Health check usando la variable PORT de Railway
 HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
   CMD node -e "require('http').get('http://localhost:' + (process.env.PORT||8000) + '/health', (r) => {if (r.statusCode !== 200) throw new Error(r.statusCode)})"
 
-# Iniciar aplicación
 CMD ["npm", "start"]

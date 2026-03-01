@@ -45,7 +45,7 @@ tmp/
 Thumbs.db
 
 # Docker
-.dockerignore
+# .dockerignore  ← los necesitamos en git para Railway
 
 # Uploads
 backend/uploads/
