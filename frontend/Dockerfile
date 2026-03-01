@@ -16,6 +16,7 @@ RUN npm install -g serve
 
 COPY --from=build /app/dist ./dist
 
+# Railway inyecta PORT automáticamente
 EXPOSE 3000
 
-CMD ["serve", "-s", "dist", "-l", "3000"]
+CMD ["sh", "-c", "serve -s dist -l ${PORT:-3000}"]

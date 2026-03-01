@@ -21,12 +21,12 @@ RUN npm run build
 # Eliminar devDependencies después de compilar
 RUN npm prune --production
 
-# Exponer puerto
-EXPOSE 3001
+# Exponer puerto (Railway inyecta PORT automáticamente)
+EXPOSE 8000
 
-# Health check
-HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
-  CMD node -e "require('http').get('http://localhost:3001/health', (r) => {if (r.statusCode !== 200) throw new Error(r.statusCode)})"
+# Health check usando la variable PORT de Railway
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
+  CMD node -e "require('http').get('http://localhost:' + (process.env.PORT||8000) + '/health', (r) => {if (r.statusCode !== 200) throw new Error(r.statusCode)})"
 
 # Iniciar aplicación
 CMD ["npm", "start"]
